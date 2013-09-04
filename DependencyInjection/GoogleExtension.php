@@ -62,6 +62,9 @@ class GoogleExtension extends Extension
         $loader->load('analytics.xml');
 
         foreach ($configs as $config) {
+            if (isset($config['page_rules'])) {
+                $container->setParameter('google.analytics.page_rules', $config['page_rules']);
+            }
             if (isset($config['trackers'])) {
                 $container->setParameter('google.analytics.trackers', $config['trackers']);
             }

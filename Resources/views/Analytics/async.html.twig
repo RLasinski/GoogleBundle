@@ -8,8 +8,8 @@ AntiMattr.GoogleAnalytics.onGatLoad = function(callback) {
     } else {
         var listener = this;
         setTimeout(function(){
-            listener.onGatLoad(callback);					
-        },100);
+            listener.onGatLoad(callback);
+        }, 100);
     }
 };
 
@@ -29,8 +29,13 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
 {% for key, tracker in google_analytics.trackers %}
     _gaq.push(['{{ google_analytics.trackerName(key) }}_setAccount', '{{ tracker.accountId }}']);
 
+    {% if tracker.anonymizeIp %}
+        _gaq.push(['_gat._anonymizeIp']);
+    {% endif %}
+
     {% if tracker.domain %}
         _gaq.push(['{{ google_analytics.trackerName(key) }}_setDomainName', '{{ tracker.domain }}']);
+        _gaq.push(['{{ google_analytics.trackerName(key) }}_addIgnoredRef', '{{ tracker.domain }}']);
 
         {% if google_analytics.getAllowAnchor(key) %}
             _gaq.push(['{{ google_analytics.trackerName(key) }}_setAllowAnchor', true ]);
@@ -57,6 +62,12 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
         {% endfor %}
     {% endif %}
 
+    {% if google_analytics.hasOptions %}
+        {% for option in google_analytics.options %}
+            _gaq.push(['{{ google_analytics.trackerName(key) }}_set', '{{ option.name }}', '{{ option.value }}']);
+        {% endfor %}
+    {% endif %}
+
     {% set siteSpeedSampleRate = google_analytics.getSiteSpeedSampleRate(key) %}
     {% if siteSpeedSampleRate is defined and siteSpeedSampleRate is not null %}
         _gaq.push(['{{ google_analytics.trackerName(key) }}_setSiteSpeedSampleRate', {{ siteSpeedSampleRate }}]);
@@ -72,34 +83,34 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
         _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', '{{ google_analytics.getCustomPageView() | raw }}']);
     {% else %}
         if (window.location.hash) {
-            _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', '{{ google_analytics.getRequestUri() | raw }}'+window.location.hash]);
+            _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', {{ google_analytics.getRequestUri() | json_encode | raw }} + window.location.hash]);
         } else {
-            _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', '{{ google_analytics.getRequestUri() | raw }}']);
+            _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', {{ google_analytics.getRequestUri() | json_encode | raw }}]);
         }
     {% endif %}
 
     {% if google_analytics.isTransactionValid %}
         {% set transaction = google_analytics.transaction %}
         _gaq.push(['{{ google_analytics.trackerName(key) }}_addTrans',
-            '{{ transaction.orderNumber | escape('js') }}', // order number required
-            '{{ transaction.affiliation | escape('js') }}', // affiliation optional
-            '{{ transaction.total | escape('js') }}', // total optional
-            '{{ transaction.tax | escape('js') }}', // tax optional
-            '{{ transaction.shipping | escape('js') }}', // shipping optional
-            '{{ transaction.city | escape('js') }}', // city optional
-            '{{ transaction.state | escape('js') }}', // state optional
-            '{{ transaction.country | escape('js') }}' // country optional
+            {{ transaction.orderNumber | json_encode | raw }}, // order number required
+            {{ transaction.affiliation | json_encode | raw }}, // affiliation optional
+            {{ transaction.total | json_encode | raw }}, // total optional
+            {{ transaction.tax | json_encode | raw }}, // tax optional
+            {{ transaction.shipping | json_encode | raw }}, // shipping optional
+            {{ transaction.city | json_encode | raw }}, // city optional
+            {{ transaction.state | json_encode | raw }}, // state optional
+            {{ transaction.country | json_encode | raw }} // country optional
         ]);
 
         {% if google_analytics.hasItems %}
             {% for item in google_analytics.items %}
                 _gaq.push(['{{ google_analytics.trackerName(key) }}_addItem',
-                    '{{ item.orderNumber | escape('js') }}', // order number required
-                    '{{ item.sku | escape('js') }}', // sku required
-                    '{{ item.name | escape('js') }}', // name optional
-                    '{{ item.category | escape('js') }}', // category optional
-                    '{{ item.price | escape('js') }}', // price required
-                    '{{ item.quantity | escape('js') }}' // quantity required
+                    {{ item.orderNumber | json_encode | raw }}, // order number required
+                    {{ item.sku | json_encode | raw }}, // sku required
+                    {{ item.name | json_encode | raw }}, // name optional
+                    {{ item.category | json_encode | raw }}, // category optional
+                    {{ item.price | json_encode | raw }}, // price required
+                    {{ item.quantity | json_encode | raw }} // quantity required
                 ]);
             {% endfor %}
         {% endif %}

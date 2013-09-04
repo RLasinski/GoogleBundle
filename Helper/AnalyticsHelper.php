@@ -153,4 +153,14 @@ class AnalyticsHelper extends Helper
     {
         return 'google_analytics';
     }
+
+    public function hasOptions()
+    {
+        return $this->analytics->hasOptions();
+    }
+
+    public function getOptions()
+    {
+        return $this->analytics->getOptions();
+    }
 }

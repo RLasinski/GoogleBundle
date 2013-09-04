@@ -1,10 +1,10 @@
 <?php
-
 namespace AntiMattr\GoogleBundle;
 
 use AntiMattr\GoogleBundle\Analytics\CustomVariable;
 use AntiMattr\GoogleBundle\Analytics\Event;
 use AntiMattr\GoogleBundle\Analytics\Item;
+use AntiMattr\GoogleBundle\Analytics\Option;
 use AntiMattr\GoogleBundle\Analytics\Transaction;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -16,36 +16,114 @@ class Analytics
     const TRANSACTION_KEY      = 'google_analytics/transaction';
     const ITEMS_KEY            = 'google_analytics/items';
 
-    private $container;
-    private $customVariables = array();
-    private $pageViewsWithBaseUrl = true;
-    private $trackers;
-    private $whitelist;
-    private $api_key;
-    private $client_id;
-    private $table_id;
+    /**
+     * @var \Symfony\Component\DependencyInjection\ContainerInterface
+     */
+    protected $container;
 
-    public function __construct(ContainerInterface $container,
-            array $trackers = array(), array $whitelist = array(), array $dashboard = array())
-    {
+    /**
+     * @var array
+     */
+    protected $customVariables = array();
+
+    /**
+     * @var array
+     */
+    protected $options = array();
+
+    /**
+     * @var bool
+     */
+    protected $pageViewsWithBaseUrl = true;
+
+    /**
+     * @var array
+     */
+    protected $trackers;
+
+    /**
+     * @var array
+     */
+    protected $whitelist;
+
+    /**
+     * @var string
+     */
+    protected $apiKey;
+
+    /**
+     * @var string
+     */
+    protected $clientId;
+
+    /**
+     * @var string
+     */
+    protected $tableId;
+
+    /**
+     * @var array
+     */
+    protected $pageRules = array();
+
+    /**
+     * @var string
+     */
+    protected $forcedPageName = null;
+
+    /**
+     * @var array
+     */
+    protected $forcedPageParams = array();
+
+    /**
+     * @param ContainerInterface $container
+     * @param array              $trackers
+     * @param array              $whitelist
+     * @param array              $dashboard
+     * @param array              $pageRules
+     */
+    public function __construct(
+        ContainerInterface $container,
+        array $trackers = array(),
+        array $whitelist = array(),
+        array $dashboard = array(),
+        array $pageRules = array()
+    ) {
         $this->container = $container;
         $this->trackers = $trackers;
         $this->whitelist = $whitelist;
-        $this->api_key = isset($dashboard['api_key']) ? $dashboard['api_key'] : '';
-        $this->client_id = isset($dashboard['client_id']) ? $dashboard['client_id'] : '';
-        $this->table_id = isset($dashboard['table_id']) ? $dashboard['table_id'] : '';
+        $this->pageRules = $pageRules;
+
+        $this->apiKey = isset($dashboard['api_key']) ? $dashboard['api_key'] : '';
+        $this->clientId = isset($dashboard['client_id']) ? $dashboard['client_id'] : '';
+        $this->tableId = isset($dashboard['table_id']) ? $dashboard['table_id'] : '';
     }
 
+    /**
+     * @return $this
+     */
     public function excludeBaseUrl()
     {
         $this->pageViewsWithBaseUrl = false;
+        return $this;
     }
 
+    /**
+     * @return $this
+     */
     public function includeBaseUrl()
     {
         $this->pageViewsWithBaseUrl = true;
+        return $this;
     }
 
+    /**
+     * @param $trackerKey
+     *
+     * @return bool
+     * @throws \InvalidArgumentException
+     */
     private function isValidConfigKey($trackerKey)
     {
         if (!array_key_exists($trackerKey, $this->trackers)) {
@@ -54,22 +132,38 @@ class Analytics
         return true;
     }
 
+    /**
+     * @param $tracker
+     * @param $property
+     * @param $value
+     *
+     * @return $this
+     */
     private function setTrackerProperty($tracker, $property, $value)
     {
         if ($this->isValidConfigKey($tracker)) {
             $this->trackers[$tracker][$property] = $value;
         }
+        return $this;
     }
 
+    /**
+     * @param $tracker
+     * @param $property
+     *
+     * @return mixed
+     */
     private function getTrackerProperty($tracker, $property)
     {
         if (!$this->isValidConfigKey($tracker)) {
-            return;
+            return null;
         }
 
         if (array_key_exists($property, $this->trackers[$tracker])) {
             return $this->trackers[$tracker][$property];
         }
+
+        return null;
     }
 
     /**
@@ -192,6 +286,7 @@ class Analytics
         if (null != ($property = $this->getTrackerProperty($trackerKey, 'setSiteSpeedSampleRate'))) {
             return (int) $property;
         }
+        return null;
     }
 
     /**
@@ -256,7 +351,7 @@ class Analytics
     }
 
     /**
-     * @param array $eventQueue
+     * @return array
      */
     public function getEventQueue()
     {
@@ -308,6 +403,9 @@ class Analytics
         $this->container->get('session')->set(self::ITEMS_KEY, $items);
     }
 
+    /**
+     * @return array
+     */
     public function getItems()
     {
         return $this->getOnce(self::ITEMS_KEY);
@@ -322,7 +420,7 @@ class Analytics
     }
 
     /**
-     * @param array $pageViewQueue
+     * @return array
      */
     public function getPageViewQueue()
     {
@@ -338,7 +436,7 @@ class Analytics
     }
 
     /**
-     * @return Symfony\Component\HttpFoundation\Request $request
+     * @return \Symfony\Component\HttpFoundation\Request $request
      */
     public function getRequest()
     {
@@ -354,32 +452,50 @@ class Analytics
      */
     public function getRequestUri()
     {
-        $request = $this->getRequest();
-        $path = $request->getPathInfo();
+        $prefix = '';
+        if (isset($this->pageRules['prefix'])) {
+            $prefix = $this->pageRules['prefix'];
+        }
 
-        if (!$this->pageViewsWithBaseUrl) {
-            $baseUrl = $request->getBaseUrl();
-            if ($baseUrl != '/') {
-                $uri = str_replace($baseUrl, '', $path);
+        $request = $this->getRequest();
+        $requestUri = $request->getPathInfo();
+
+        if ($this->forcedPageName !== null) {
+            $requestUri = $this->forcedPageName;
+
+        } elseif (isset($this->pageRules['rules']) && count($this->pageRules['rules']) > 0) {
+            foreach ($this->pageRules['rules'] as $rule) {
+                if (preg_match('~' . $rule['path'] . '~', $requestUri)) {
+                    $requestUri = $rule['name'];
+                    break;
+                }
             }
         }
 
-        $params = $request->query->all();
-        if (!empty($this->whitelist) && !empty($params)) {
-            $whitelist = array_flip($this->whitelist);
-            $params = array_intersect_key($params, $whitelist);
+        $params = array();
+        if (isset($this->pageRules['add_params']) && $this->pageRules['add_params'] === true) {
+            $params = $request->query->all();
+            if (!empty($this->whitelist) && !empty($params)) {
+                $whitelist = array_flip($this->whitelist);
+                $params = array_intersect_key($params, $whitelist);
+            }
+        }
+        if (count($this->forcedPageParams) > 0) {
+            $params = array_merge($params, $this->forcedPageParams);
+        }
+        if (count($params) > 0) {
+            $query = http_build_query($params);
+
+            if (isset($query) && '' != trim($query)) {
+                $requestUri .= '?'. $query;
+            }
         }
 
-        $requestUri = $path;
-        $query = http_build_query($params);
-
-        if (isset($query) && '' != trim($query)) {
-            $requestUri .= '?'. $query;
-        }
-        return $requestUri;
+        return $prefix . $requestUri;
     }
 
     /**
+     * @param array $trackers
      * @return array $trackers
      */
     public function getTrackers(array $trackers = array())
@@ -484,7 +600,7 @@ class Analytics
     }
 
     /**
-     * @return array $items
+     * @return Item[]
      */
     private function getItemsFromSession()
     {
@@ -500,28 +616,161 @@ class Analytics
     }
 
     /**
-     * 
-     * @return string
+     * Set the {@see $apiKey} property.
+     *
+     * @param string $apiKey
+     *
+     * @return $this Returns the instance of this or a derived class.
+     */
+    public function setApiKey($apiKey)
+    {
+        $this->apiKey = $apiKey;
+        return $this;
+    }
+
+    /**
+     * Get the {@see $apiKey} property.
+     *
+     * @return string Returns the <em>$apiKey</em> property.
      */
     public function getApiKey()
     {
-        return $this->api_key;
+        return $this->apiKey;
     }
 
     /**
-     * 
-     * @return string
+     * Set the {@see $clientId} property.
+     *
+     * @param string $clientId
+     *
+     * @return $this Returns the instance of this or a derived class.
+     */
+    public function setClientId($clientId)
+    {
+        $this->clientId = $clientId;
+        return $this;
+    }
+
+    /**
+     * Get the {@see $clientId} property.
+     *
+     * @return string Returns the <em>$clientId</em> property.
      */
     public function getClientId()
     {
-        return $this->client_id;
+        return $this->clientId;
     }
 
     /**
-     * @return string 
+     * Set the {@see $tableId} property.
+     *
+     * @param string $tableId
+     *
+     * @return $this Returns the instance of this or a derived class.
+     */
+    public function setTableId($tableId)
+    {
+        $this->tableId = $tableId;
+        return $this;
+    }
+
+    /**
+     * Get the {@see $tableId} property.
+     *
+     * @return string Returns the <em>$tableId</em> property.
      */
     public function getTableId()
     {
-        return $this->table_id;
+        return $this->tableId;
+    }
+
+    /**
+     * Set the {@see $forcedPageName} property.
+     *
+     * @param string $forcedPageName
+     *
+     * @return $this Returns the instance of this or a derived class.
+     */
+    public function setForcedPageName($forcedPageName)
+    {
+        $this->forcedPageName = (string) $forcedPageName;
+        return $this;
+    }
+
+    /**
+     * Get the {@see $forcedPageName} property.
+     *
+     * @return string Returns the <em>$forcedPageName</em> property.
+     */
+    public function getForcedPageName()
+    {
+        return $this->forcedPageName;
+    }
+
+    /**
+     * Set the {@see $options} property.
+     *
+     * @param array $options
+     *
+     * @return $this Returns the instance of this or a derived class.
+     */
+    public function setOptions($options)
+    {
+        $this->options = $options;
+        return $this;
+    }
+
+    /**
+     * Get the {@see $options} property.
+     *
+     * @return array Returns the <em>$options</em> property.
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * @param Option $option
+     * @return $this
+     */
+    public function addOption(Option $option)
+    {
+        $this->options[] = $option;
+        return $this;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function hasOptions()
+    {
+        if (!empty($this->options)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Set the {@see $forcedPageParams} property.
+     *
+     * @param array $forcedPageParams
+     *
+     * @return $this Returns the instance of this or a derived class.
+     */
+    public function setForcedPageParams($forcedPageParams)
+    {
+        $this->forcedPageParams = $forcedPageParams;
+        return $this;
+    }
+
+    /**
+     * Get the {@see $forcedPageParams} property.
+     *
+     * @return array Returns the <em>$forcedPageParams</em> property.
+     */
+    public function getForcedPageParams()
+    {
+        return $this->forcedPageParams;
     }
 }
