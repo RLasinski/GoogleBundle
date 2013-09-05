@@ -39,20 +39,14 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
 
         {% if google_analytics.getAllowAnchor(key) %}
             _gaq.push(['{{ google_analytics.trackerName(key) }}_setAllowAnchor', true ]);
-        {% else %}
-            _gaq.push(['{{ google_analytics.trackerName(key) }}_setAllowAnchor', false ]);
         {% endif %}
 
         {% if google_analytics.getAllowLinker(key) %}
             _gaq.push(['{{ google_analytics.trackerName(key) }}_setAllowLinker', true ]);
-        {% else %}
-            _gaq.push(['{{ google_analytics.trackerName(key) }}_setAllowLinker', false ]);
         {% endif %}
 
         {% if google_analytics.getAllowHash(key) %}
             _gaq.push(['{{ google_analytics.trackerName(key) }}_setAllowHash', true ]);
-        {% else %}
-            _gaq.push(['{{ google_analytics.trackerName(key) }}_setAllowHash', false ]);
         {% endif %}
     {% endif %}
 
@@ -82,11 +76,7 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
     {% if google_analytics.hasCustomPageView %}
         _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', '{{ google_analytics.getCustomPageView() | raw }}']);
     {% else %}
-        if (window.location.hash) {
-            _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', {{ google_analytics.getRequestUri() | json_encode | raw }} + window.location.hash]);
-        } else {
-            _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', {{ google_analytics.getRequestUri() | json_encode | raw }}]);
-        }
+        _gaq.push(['{{ google_analytics.trackerName(key) }}_trackPageview', {{ google_analytics.getRequestUri() | json_encode | raw }}]);
     {% endif %}
 
     {% if google_analytics.isTransactionValid %}
