@@ -82,25 +82,25 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
     {% if google_analytics.isTransactionValid %}
         {% set transaction = google_analytics.transaction %}
         _gaq.push(['{{ google_analytics.trackerName(key) }}_addTrans',
-            {{ transaction.orderNumber | json_encode | raw }}, // order number required
-            {{ transaction.affiliation | json_encode | raw }}, // affiliation optional
-            {{ transaction.total | json_encode | raw }}, // total optional
-            {{ transaction.tax | json_encode | raw }}, // tax optional
-            {{ transaction.shipping | json_encode | raw }}, // shipping optional
-            {{ transaction.city | json_encode | raw }}, // city optional
-            {{ transaction.state | json_encode | raw }}, // state optional
-            {{ transaction.country | json_encode | raw }} // country optional
+            '{{ transaction.orderNumber | raw | replace({'\'': ''}) }}',
+            '{{ transaction.affiliation | raw | replace({'\'': ''}) }}',
+            '{{ transaction.total | raw | replace({'\'': ''}) }}',
+            '{{ transaction.tax | raw | replace({'\'': ''}) }}',
+            '{{ transaction.shipping | raw | replace({'\'': ''}) }}',
+            '{{ transaction.city | raw | replace({'\'': ''}) }}',
+            '{{ transaction.state | raw | replace({'\'': ''}) }}',
+            '{{ transaction.country | raw | replace({'\'': ''}) }}'
         ]);
 
         {% if google_analytics.hasItems %}
             {% for item in google_analytics.items %}
                 _gaq.push(['{{ google_analytics.trackerName(key) }}_addItem',
-                    {{ item.orderNumber | json_encode | raw }}, // order number required
-                    {{ item.sku | json_encode | raw }}, // sku required
-                    {{ item.name | json_encode | raw }}, // name optional
-                    {{ item.category | json_encode | raw }}, // category optional
-                    {{ item.price | json_encode | raw }}, // price required
-                    {{ item.quantity | json_encode | raw }} // quantity required
+                    '{{ item.orderNumber | raw | replace({'\'': ''}) }}',
+                    '{{ item.sku | raw | replace({'\'': ''}) }}',
+                    '{{ item.name | raw | replace({'\'': ''}) }}',
+                    '{{ item.category | raw | replace({'\'': ''}) }}',
+                    '{{ item.price | raw | replace({'\'': ''}) }}',
+                    '{{ item.quantity | raw | replace({'\'': ''}) }}'
                 ]);
             {% endfor %}
         {% endif %}
