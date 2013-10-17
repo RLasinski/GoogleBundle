@@ -84,9 +84,9 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
         _gaq.push(['{{ google_analytics.trackerName(key) }}_addTrans',
             '{{ transaction.orderNumber | raw | replace({'\'': ''}) }}',
             '{{ transaction.affiliation | raw | replace({'\'': ''}) }}',
-            '{{ transaction.total | raw | replace({'\'': ''}) }}',
-            '{{ transaction.tax | raw | replace({'\'': ''}) }}',
-            '{{ transaction.shipping | raw | replace({'\'': ''}) }}',
+            '{{ transaction.total | number_format(2) }}',
+            '{{ transaction.tax | number_format(2) }}',
+            '{{ transaction.shipping | number_format(2) }}',
             '{{ transaction.city | raw | replace({'\'': ''}) }}',
             '{{ transaction.state | raw | replace({'\'': ''}) }}',
             '{{ transaction.country | raw | replace({'\'': ''}) }}'
@@ -99,7 +99,7 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
                     '{{ item.sku | raw | replace({'\'': ''}) }}',
                     '{{ item.name | raw | replace({'\'': ''}) }}',
                     '{{ item.category | raw | replace({'\'': ''}) }}',
-                    '{{ item.price | raw | replace({'\'': ''}) }}',
+                    '{{ item.price | number_format(2) }}',
                     '{{ item.quantity | raw | replace({'\'': ''}) }}'
                 ]);
             {% endfor %}
