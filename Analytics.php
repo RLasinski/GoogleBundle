@@ -524,7 +524,7 @@ class Analytics
         if ($this->hasItems()) {
             $items = $this->getItemsFromSession();
             foreach ($items as $item) {
-                if (!$item->getOrderNumber() || !$item->getSku() || !$item->getPrice() || !$item->getQuantity()) {
+                if (!$item->getOrderNumber() || !$item->getSku() || !$item->getQuantity()) {
                     return false;
                 }
             }
