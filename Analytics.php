@@ -269,6 +269,22 @@ class Analytics
     }
 
     /**
+     * @param string $tracker
+     * @param array  $properties
+     *
+     * @return $this
+     */
+    public function replaceTrackerProperties($tracker, array $properties)
+    {
+        if ($this->isValidConfigKey($tracker)) {
+            foreach ($properties as $property => $value) {
+                $this->trackers[$tracker][$property] = $value;
+            }
+        }
+        return $this;
+    }
+
+    /**
      * @param string $trackerKey
      * @param int $siteSpeedSampleRate
      */
