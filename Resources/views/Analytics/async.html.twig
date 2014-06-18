@@ -84,9 +84,9 @@ if ( _gaq == null || typeof(_gaq) != 'array') { var _gaq = window._gaq = []; }
         _gaq.push(['{{ google_analytics.trackerName(key) }}_addTrans',
             '{{ transaction.orderNumber | raw | replace({'\'': ''}) }}',
             '{{ transaction.affiliation | raw | replace({'\'': ''}) }}',
-            '{{ transaction.total | number_format(2) }}',
-            '{{ transaction.tax | number_format(2) }}',
-            '{{ transaction.shipping | number_format(2) }}',
+            '{{ transaction.total | number_format(2, null, '') }}',
+            '{{ transaction.tax | number_format(2, null, '') }}',
+            '{{ transaction.shipping | number_format(2, null, '') }}',
             '{{ transaction.city | raw | replace({'\'': ''}) }}',
             '{{ transaction.state | raw | replace({'\'': ''}) }}',
             '{{ transaction.country | raw | replace({'\'': ''}) }}'
